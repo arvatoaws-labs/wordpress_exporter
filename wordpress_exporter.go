@@ -170,8 +170,8 @@ func (collector *wpCollector) Collect(ch chan<- prometheus.Metric) {
 	wpQueryGaugeVec(db, ch, collector.numPostsMetric, queryNumPostsMetric)
 
 	//select count(*) as numSessions from wp_woocommerce_sessions;
-	queryNumSessionsMetric := fmt.Sprintf("select count(*) as numSessions from %swoocommerce_sessions;", collector.dbTablePrefix)
-	wpQueryGauge(db, ch, collector.numSessionsMetric, queryNumSessionsMetric)
+	//queryNumSessionsMetric := fmt.Sprintf("select count(*) as numSessions from %swoocommerce_sessions;", collector.dbTablePrefix)
+	//wpQueryGauge(db, ch, collector.numSessionsMetric, queryNumSessionsMetric)
 
 	//select post_status as label, count(*) as value from wp_posts WHERE post_type='scheduled-action' GROUP BY post_status;
 	queryNumWebhooksMetric := fmt.Sprintf("select post_status as label, count(*) as value from %sposts WHERE post_type='scheduled-action' GROUP BY post_status;", collector.dbTablePrefix)
