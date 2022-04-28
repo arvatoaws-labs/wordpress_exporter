@@ -170,8 +170,8 @@ func (collector *wpCollector) Collect(ch chan<- prometheus.Metric) {
 	wpQueryGaugeVec(db, ch, collector.numPostsMetric, queryNumPostsMetric)
 
 	//select count(*) as numSessions from wp_woocommerce_sessions;
-	//queryNumSessionsMetric := fmt.Sprintf("select count(*) as numSessions from %swoocommerce_sessions;", collector.dbTablePrefix)
-	//wpQueryGauge(db, ch, collector.numSessionsMetric, queryNumSessionsMetric)
+	queryNumSessionsMetric := fmt.Sprintf("select count(*) as numSessions from %swoocommerce_sessions;", collector.dbTablePrefix)
+	wpQueryGauge(db, ch, collector.numSessionsMetric, queryNumSessionsMetric)
 
 	//select post_status as label, count(*) as value from wp_posts WHERE post_type='scheduled-action' GROUP BY post_status;
 	queryNumWebhooksMetric := fmt.Sprintf("select post_status as label, count(*) as value from %sposts WHERE post_type='scheduled-action' GROUP BY post_status;", collector.dbTablePrefix)
@@ -203,37 +203,41 @@ func wpQueryCounter(db *sql.DB, ch chan<- prometheus.Metric, desc *prometheus.De
 	var value float64
 	var err = db.QueryRow(mysqlRequest).Scan(&value)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+	} else {
+		ch <- prometheus.MustNewConstMetric(desc, prometheus.CounterValue, value)
 	}
-	ch <- prometheus.MustNewConstMetric(desc, prometheus.CounterValue, value)
+	
 }
 
 func wpQueryGauge(db *sql.DB, ch chan<- prometheus.Metric, desc *prometheus.Desc, mysqlRequest string) {
 	var value float64
 	var err = db.QueryRow(mysqlRequest).Scan(&value)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+	} else {
+		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, value)
 	}
-	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, value)
 }
 
 func wpQueryGaugeVec(db *sql.DB, ch chan<- prometheus.Metric, desc *prometheus.GaugeVec, mysqlRequest string) {
 	rows, err := db.Query(mysqlRequest)
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	desc.Reset()
-	for rows.Next() {
-		var label string
-		var value float64
-		err = rows.Scan(&label, &value)
-		if err != nil {
-			log.Fatal(err)
+		log.Print(err)
+	} else {
+		defer rows.Close()
+		desc.Reset()
+		for rows.Next() {
+			var label string
+			var value float64
+			err = rows.Scan(&label, &value)
+			if err != nil {
+				log.Fatal(err)
+			}
+			desc.WithLabelValues(label).Set(value)
 		}
-		desc.WithLabelValues(label).Set(value)
+		desc.Collect(ch)		
 	}
-	desc.Collect(ch)
 }
 
 func main() {
